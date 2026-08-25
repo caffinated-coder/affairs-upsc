@@ -14,33 +14,29 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: APP_NAME },
-      {
-        name: "description",
-        content: "PIB, MEA and News on Air briefings for UPSC current affairs.",
-      },
+      { name: "description", content: "PIB, MEA and News on Air briefings for UPSC \u2014 daily, weekly or monthly PDFs." },
       { name: "theme-color", content: "#1e4d45" },
     ],
     links: [
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
       { rel: "stylesheet", href: appCss },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,500&display=swap",
-      },
     ],
   }),
   component: Root,
 });
 
 function Root() {
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: { staleTime: 5 * 60 * 1000, retry: 1, refetchOnWindowFocus: false },
-        },
-      }),
-  );
+  const [queryClient] = useState(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 10 * 60 * 1000,
+        gcTime: 24 * 60 * 60 * 1000,
+        retry: 1,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+      },
+    },
+  }));
   return (
     <html lang="en" suppressHydrationWarning>
       <head><HeadContent /></head>
@@ -49,7 +45,7 @@ function Root() {
         <AuthProvider>
           <QueryClientProvider client={queryClient}>
             <Outlet />
-            <Toaster position="bottom-center" toastOptions={{ className: "font-sans", style: { background: "#faf6ee", color: "#1c1914", border: "1px solid #d9d0c2" } }} />
+            <Toaster position="bottom-center" toastOptions={{ className: "font-sans text-sm", style: { background: "#fbf8f2", color: "#1c1914", border: "1px solid #ddd4c6" } }} />
           </QueryClientProvider>
         </AuthProvider>
         <Scripts />
