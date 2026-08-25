@@ -2,20 +2,14 @@ const IST = "Asia/Kolkata";
 export const MIN_DATE = "2003-01-01";
 export const MAX_CUSTOM_DAYS = 31;
 export type VolumeGrain = "day" | "week" | "month";
-
 const MONTHS: Record<string, number> = {
   jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3, apr: 4, april: 4,
   may: 5, jun: 6, june: 6, jul: 7, july: 7, aug: 8, august: 8, sep: 9, sept: 9,
   september: 9, oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12,
 };
-
-export function todayIst(): string {
-  return new Date().toLocaleDateString("en-CA", { timeZone: IST });
-}
+export function todayIst(): string { return new Date().toLocaleDateString("en-CA", { timeZone: IST }); }
 export function clampIsoDate(iso: string, min = MIN_DATE, max = todayIst()): string {
-  if (iso < min) return min;
-  if (iso > max) return max;
-  return iso;
+  if (iso < min) return min; if (iso > max) return max; return iso;
 }
 export function shiftIsoDate(iso: string, days: number): string {
   const [y, m, d] = iso.split("-").map(Number);
@@ -30,15 +24,23 @@ export function shiftMonth(iso: string, delta: number): string {
 }
 export function formatDisplayDate(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-IN", {
-    weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC",
-  });
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 }
 export function formatShortDate(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-IN", {
-    day: "numeric", month: "short", year: "numeric", timeZone: "UTC",
-  });
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+}
+export function formatChipDate(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  const date = dt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
+  const weekday = dt.toLocaleDateString("en-GB", { weekday: "long", timeZone: "UTC" });
+  return `${date}  |  ${weekday}`;
+}
+export function storyClock(postedDate: string): string {
+  const t = postedDate.match(/(\d{1,2}:\d{2}\s*[AP]M)/i);
+  if (t) return t[1].replace(/\s+/g, " ").toUpperCase();
+  return postedDate.replace(/\s+/g, " ").slice(0, 12);
 }
 export function parsePostedDate(raw: string): string | null {
   const text = raw.replace(/\s+/g, " ").trim();
@@ -52,11 +54,7 @@ export function eachMonthInRange(from: string, to: string): { year: number; mont
   const months: { year: number; month: number }[] = [];
   let [y, m] = from.slice(0, 7).split("-").map(Number);
   const [ey, em] = to.slice(0, 7).split("-").map(Number);
-  while (y < ey || (y === ey && m <= em)) {
-    months.push({ year: y, month: m });
-    m += 1;
-    if (m > 12) { m = 1; y += 1; }
-  }
+  while (y < ey || (y === ey && m <= em)) { months.push({ year: y, month: m }); m += 1; if (m > 12) { m = 1; y += 1; } }
   return months;
 }
 export function daysBetween(from: string, to: string): number {
@@ -123,7 +121,7 @@ export function formatSeriesLabel(grain: VolumeGrain, key: string, lang: 1 | 2 =
     const b = new Date(`${end}T00:00:00Z`);
     const mon = a.toLocaleDateString(locale, { month: "short", timeZone: "UTC" });
     const mon2 = b.toLocaleDateString(locale, { month: "short", timeZone: "UTC" });
-    return a.getUTCMonth() === b.getUTCMonth() ? `${a.getUTCDate()}–${b.getUTCDate()} ${mon}` : `${a.getUTCDate()} ${mon}–${b.getUTCDate()} ${mon2}`;
+    return a.getUTCMonth() === b.getUTCMonth() ? `${a.getUTCDate()}\u2013${b.getUTCDate()} ${mon}` : `${a.getUTCDate()} ${mon}\u2013${b.getUTCDate()} ${mon2}`;
   }
   return new Date(`${key}T00:00:00Z`).toLocaleDateString(locale, { month: "short", year: "2-digit", timeZone: "UTC" });
 }
