@@ -1,7 +1,29 @@
-# Affairs × UPSC
+# Affairs \u00d7 UPSC
 
-PIB, MEA, Bilaterals and News on Air digest for UPSC current affairs.
-Daily / weekly / monthly filters. Export selected releases as PDFs (images and tables included).
+Press-release digest for UPSC current affairs.
+
+**Sources:** PIB, MEA, Bilaterals, News on Air.
+Pick a day / week / month / custom range, filter by ministry, open the reader, export PDFs (images + tables).
+
+Repo: https://github.com/caffinated-coder/affairs-upsc
+
+## Deploy on Vercel (next steps)
+
+1. Open https://github.com/apps/vercel and **Configure**.
+2. Under Repository access, include **affairs-upsc** (or All repositories) \u2192 Save.
+3. Open https://vercel.com/new \u2192 Import **affairs-upsc**.
+4. Settings:
+   - Framework Preset: **Other**
+   - Build Command: `npm run build`
+   - Output: leave default (Nitro writes `.vercel/output`)
+   - Node.js: **22.x**
+5. Environment variables:
+   - `VITE_AUTH_ENABLED` = `false`
+6. Deploy. First build takes a few minutes.
+
+If the repo is missing from the import list, the GitHub App cannot see the private repo \u2014 go back to step 1.
+
+Hobby functions time out around 10s. A full PIB month scrape can need **Vercel Pro**. Day / week views are fine on Hobby.
 
 ## Local
 
@@ -10,14 +32,4 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:8080
-
-## Deploy on Vercel
-
-1. Import this repo at https://vercel.com/new
-2. Framework: **Other**
-3. Build command: `npm run build`
-4. Node.js: **22**
-5. Environment variable: `VITE_AUTH_ENABLED` = `false`
-
-Hobby is enough for daily use. A cold full-month scrape can time out; use Day/Week as the default on the live site.
+Opens at http://localhost:8080
