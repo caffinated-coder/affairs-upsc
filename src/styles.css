@@ -1,38 +1,38 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #eef1f8;
-  --color-bg-warm: #e7ebf4;
-  --color-surface: #ffffff;
-  --color-surface-2: #f7f8fc;
-  --color-ink: #1c2434;
-  --color-ink-soft: #3d4658;
-  --color-muted: #6b7289;
-  --color-faint: #9aa3b5;
-  --color-line: #e6eaf3;
-  --color-line-strong: #d3d9e6;
-  --color-accent: #3d9b80;
-  --color-accent-fg: #f4fffa;
-  --color-accent-soft: #e7f6f0;
-  --color-violet: #6d5ae6;
-  --color-violet-soft: #eee9ff;
-  --color-danger: #c04545;
-  --color-paper: #ffffff;
-  --font-sans: "Inter", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
-  --font-display: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --radius-sm: 10px;
-  --radius-md: 16px;
-  --radius-lg: 24px;
-  --shadow-border: 0 1px 2px rgba(28, 36, 52, 0.04), 0 8px 24px -16px rgba(28, 36, 52, 0.12);
+  --color-bg: #f4efe6;
+  --color-bg-warm: #ebe3d6;
+  --color-surface: #fbf8f2;
+  --color-surface-2: #fffdf8;
+  --color-ink: #1c1914;
+  --color-ink-soft: #3f3a32;
+  --color-muted: #6f675c;
+  --color-faint: #9a9184;
+  --color-line: #ddd4c6;
+  --color-line-strong: #c4b9a8;
+  --color-accent: #1e4d45;
+  --color-accent-fg: #faf6ee;
+  --color-accent-soft: #e4ece8;
+  --color-danger: #8f2d21;
+  --color-paper: #fbf8f2;
+  --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-display: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --shadow-border: 0 0 0 1px rgba(28, 25, 20, 0.06);
 }
 
 @layer base {
   html { -webkit-font-smoothing: antialiased; background: var(--color-bg); color: var(--color-ink); }
   body { font-family: var(--font-sans); min-height: 100dvh; background: var(--color-bg); }
   button:not(:disabled), [role="button"]:not(:disabled) { cursor: pointer; }
-  h1, h2, h3 { text-wrap: balance; }
+  h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; }
+  ::selection { background: color-mix(in oklab, var(--color-accent) 22%, transparent); }
 }
-.list-row { content-visibility: auto; contain-intrinsic-size: 0 140px; }
+
+.list-row { content-visibility: auto; contain-intrinsic-size: 0 72px; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
