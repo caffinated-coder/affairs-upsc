@@ -1,8 +1,9 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, FileDown, Loader2, Search, X } from "lucide-react";
-import { lazy, Suspense, useDeferredValue, useMemo, useState } from "react";
+import { Check, ChevronLeft, ChevronRight, FileDown, Loader2, Search, X } from "lucide-react";
+import { lazy, Suspense, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { MinistryFilter } from "@/components/ministry-filter";
+import { ConsistencyHeatmap } from "@/components/consistency-heatmap";
 import { ViewersBadge } from "@/components/viewers-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,20 +14,19 @@ import { fetchArticlesFn, listReleasesFn } from "@/lib/pib/api";
 import { fetchMeaArticlesFn, listMeaFn } from "@/lib/mea/api";
 import { fetchAirArticlesFn, listAirFn } from "@/lib/air/api";
 import { readLocalQuery, writeLocalQuery } from "@/lib/pib/local-cache";
-import { clampIsoDate, clampRange, formatDisplayDate, formatMonthLabel, MAX_CUSTOM_DAYS, MIN_DATE, monthRange, shiftIsoDate, shiftMonth, todayIst } from "@/lib/pib/dates";
+import { clampIsoDate, clampRange, formatDisplayDate, formatMonthLabel, MAX_CUSTOM_DAYS, MIN_DATE, monthRange, parsePostedDate, shiftIsoDate, shiftMonth, todayIst } from "@/lib/pib/dates";
 import { ALL_DESK, releaseMatchesDesk, type DeskFilter } from "@/lib/pib/ministries";
 import { blocksOf, type DigestSource, type PibLang, type ReleaseArticle } from "@/lib/pib/types";
+import { dayStats, isRead, markRead, recordDayTotals, toggleRead } from "@/lib/reads";
 import { cn } from "@/lib/utils";
 
 const DigestCharts = lazy(() => import("@/components/digest-charts").then((m) => ({ default: m.DigestCharts })));
-
 type Mode = "day" | "week" | "month" | "custom";
 const MAX_PDF = 40;
 const PAGE = 60;
 const SOURCES: { id: DigestSource; label: string }[] = [
   { id: "pib", label: "PIB" }, { id: "mea", label: "MEA" }, { id: "bilateral", label: "Bilaterals" }, { id: "air", label: "AIR" },
 ];
-
 function rangeFor(mode: Mode, focus: string, from: string, to: string, minDate: string) {
   const today = todayIst();
   if (mode === "day") { const d = clampIsoDate(focus, minDate); return { from: d, to: d }; }
@@ -44,6 +44,10 @@ async function fetchFor(source: DigestSource, prids: string[], lang: PibLang) {
   if (source === "air") return fetchAirArticlesFn({ data: { prids, lang } });
   return fetchArticlesFn({ data: { prids, lang } });
 }
+function releaseIso(postedDate: string, fallback: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(postedDate)) return postedDate;
+  return parsePostedDate(postedDate) ?? fallback;
+}
 
 export function DigestApp() {
   const today = todayIst();
@@ -59,6 +63,7 @@ export function DigestApp() {
   const [reader, setReader] = useState<ReleaseArticle | null>(null);
   const [showCharts, setShowCharts] = useState(false);
   const [visible, setVisible] = useState(PAGE);
+  const [readTick, setReadTick] = useState(0);
   const search = useDeferredValue(q.trim().toLowerCase());
   const minDate = source === "pib" ? "2017-01-01" : source === "air" ? "2018-01-01" : "2003-01-01";
   const { from, to } = rangeFor(mode, focus, customFrom, customTo, minDate);
@@ -76,6 +81,16 @@ export function DigestApp() {
   }, [list.data]);
   const shown = useMemo(() => (list.data?.releases ?? []).filter((r) => releaseMatchesDesk(r.ministry, desk) && (!search || r.title.toLowerCase().includes(search) || r.ministry.toLowerCase().includes(search))), [list.data, desk, search]);
   const page = shown.slice(0, visible);
+  const trackDay = mode === "day" ? from : today;
+  const stats = useMemo(() => dayStats(source, trackDay), [source, trackDay, readTick, list.data]);
+  useEffect(() => {
+    const releases = list.data?.releases;
+    if (!releases?.length) return;
+    const counts: Record<string, number> = {};
+    for (const r of releases) { const iso = releaseIso(r.postedDate, from); counts[iso] = (counts[iso] ?? 0) + 1; }
+    recordDayTotals(source, counts);
+    setReadTick((n) => n + 1);
+  }, [list.data, source, from]);
   const pdfMut = useMutation({
     mutationFn: async (prids: string[]) => {
       const articles = await fetchFor(source, prids.slice(0, MAX_PDF), lang);
@@ -88,7 +103,10 @@ export function DigestApp() {
   });
   const openMut = useMutation({
     mutationFn: async (prid: string) => (await fetchFor(source, [prid], lang))[0],
-    onSuccess: setReader,
+    onSuccess: (article) => {
+      if (article) { markRead(source, article.prid, releaseIso(article.postedDate, from)); setReadTick((n) => n + 1); }
+      setReader(article);
+    },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Could not open"),
   });
   const toggle = (id: string) => setPicked((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else if (next.size < MAX_PDF) next.add(id); return next; });
@@ -138,6 +156,7 @@ export function DigestApp() {
           {showCharts && <div className="mt-2"><Suspense fallback={<Skeleton className="h-44" />}><DigestCharts anchor={to} lang={lang} desk={desk} onSelectDesk={setDesk} /></Suspense></div>}
         </div>
       )}
+      <div className="mb-4"><ConsistencyHeatmap source={source} todayRead={stats.read} todayTotal={stats.total} tick={readTick + (list.data?.count ?? 0)} /></div>
       <div className="grid gap-4 md:grid-cols-[240px_minmax(0,1fr)]">
         <MinistryFilter lang={lang} filter={desk} onChange={setDesk} listingNames={[...countsByName.keys()]} countsByName={countsByName} />
         <section>
@@ -147,6 +166,7 @@ export function DigestApp() {
               <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search titles" className="h-10 pl-9" />
             </div>
             <Badge variant="muted">{shown.length}</Badge>
+            <Badge variant="default">{stats.read}/{stats.total || shown.length} read</Badge>
             <Button size="sm" disabled={pdfMut.isPending || (!picked.size && shown.length === 0)} onClick={() => pdfMut.mutate(picked.size ? [...picked] : shown.slice(0, MAX_PDF).map((r) => r.prid))}>
               {pdfMut.isPending ? <Loader2 className="size-4 animate-spin" /> : <FileDown className="size-4" />} PDF{picked.size ? ` ${picked.size}` : ""}
             </Button>
@@ -155,15 +175,22 @@ export function DigestApp() {
           {list.isError && <p className="text-sm text-danger">{list.error instanceof Error ? list.error.message : "Failed to load"}</p>}
           {!list.isLoading && shown.length === 0 && <p className="py-10 text-center text-sm text-muted">No releases in this window.</p>}
           <ul className="space-y-1.5">
-            {page.map((r) => (
-              <li key={r.prid} className="list-row flex gap-3 rounded-md bg-surface px-3 py-2.5 shadow-[var(--shadow-border)]">
-                <Checkbox checked={picked.has(r.prid)} onCheckedChange={() => toggle(r.prid)} aria-label="Select for PDF" />
-                <button type="button" className="min-w-0 flex-1 text-left" onClick={() => openMut.mutate(r.prid)}>
-                  <p className="line-clamp-2 text-sm font-medium text-ink">{r.title}</p>
-                  <p className="mt-0.5 truncate text-xs text-muted">{r.ministry} \u00b7 {r.postedDate}</p>
-                </button>
-              </li>
-            ))}
+            {page.map((r) => {
+              const iso = releaseIso(r.postedDate, from);
+              const read = isRead(source, r.prid);
+              return (
+                <li key={r.prid} className="list-row flex items-start gap-3 rounded-md bg-surface px-3 py-2.5 shadow-[var(--shadow-border)]">
+                  <Checkbox checked={picked.has(r.prid)} onCheckedChange={() => toggle(r.prid)} aria-label="Select for PDF" />
+                  <button type="button" className="min-w-0 flex-1 text-left" onClick={() => openMut.mutate(r.prid)}>
+                    <p className={cn("line-clamp-2 text-sm font-medium", read ? "text-muted" : "text-ink")}>{r.title}</p>
+                    <p className="mt-0.5 truncate text-xs text-muted">{r.ministry} \u00b7 {r.postedDate}</p>
+                  </button>
+                  <button type="button" title={read ? "Mark unread" : "Mark as read"} aria-label={read ? "Mark unread" : "Mark as read"} aria-pressed={read} onClick={() => { toggleRead(source, r.prid, iso); setReadTick((n) => n + 1); }} className={cn("mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full border", read ? "border-accent bg-accent text-accent-fg" : "border-line text-faint hover:border-accent hover:text-accent")}>
+                    <Check className="size-3.5" strokeWidth={2.5} />
+                  </button>
+                </li>
+              );
+            })}
           </ul>
           {shown.length > visible && <Button variant="outline" className="mt-3 w-full" onClick={() => setVisible((n) => n + PAGE)}>Show more \u00b7 {shown.length - visible} left</Button>}
         </section>
